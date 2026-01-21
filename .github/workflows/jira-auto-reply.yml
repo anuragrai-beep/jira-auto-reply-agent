@@ -1,11 +1,15 @@
 name: Jira Auto Reply Agent
 
 on:
-  # Run on schedule: Every hour from 5:30 AM to 5:30 PM IST (UTC: 00:00-12:00)
+  # Run on schedule: Every hour from 5:30 AM to 5:30 PM IST
   schedule:
     # Cron format: minute hour day month day-of-week
-    # Runs every hour during business hours (IST: 5:30 AM - 5:30 PM = UTC: 00:00 - 12:00)
-    - cron: '30 0-11 * * *'  # Every hour at :30 minutes past, UTC 00:00-11:30
+    # IST = UTC + 5:30, so:
+    # 5:30 AM IST = 00:00 UTC, 5:30 PM IST = 12:00 UTC
+    # Schedule includes exact start/end times plus hourly checks
+    - cron: '0 0 * * *'      # 5:30 AM IST (00:00 UTC) - Start of day
+    - cron: '30 0-11 * * *'  # Every hour 6:00 AM - 4:30 PM IST (00:30-11:30 UTC)
+    - cron: '0 12 * * *'     # 5:30 PM IST (12:00 UTC) - End of day
     
   # Allow manual trigger
   workflow_dispatch:
