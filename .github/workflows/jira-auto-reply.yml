@@ -1,0 +1,103 @@
+name: Jira Auto Reply Agent
+
+on:
+  # Run on schedule: Every hour from 5:30 AM to 5:30 PM IST (UTC: 00:00-12:00)
+  schedule:
+    # Cron format: minute hour day month day-of-week
+    # Runs every hour during business hours (IST: 5:30 AM - 5:30 PM = UTC: 00:00 - 12:00)
+    - cron: '30 0-11 * * *'  # Every hour at :30 minutes past, UTC 00:00-11:30
+    
+  # Allow manual trigger
+  workflow_dispatch:
+  
+  # Optional: Run on push to main (for testing)
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  run-jira-agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install papermill jupyter  # For executing notebooks
+      
+      - name: Set up environment variables
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_ASSIGNEE_ACCOUNT_ID: ${{ secrets.JIRA_ASSIGNEE_ACCOUNT_ID }}
+          PROJECT_KEY: ${{ secrets.PROJECT_KEY }}
+          ASSIGNEE_FALLBACK: ${{ secrets.ASSIGNEE_FALLBACK || 'currentUser()' }}
+          STATUS_FIELD_ID: ${{ secrets.STATUS_FIELD_ID || 'customfield_10353' }}
+          STATUS_TRANSITION_TODO_TO_IN_PROGRESS: ${{ secrets.STATUS_TRANSITION_TODO_TO_IN_PROGRESS || 'To-Do' }}
+          STATUS_TRANSITION_IN_PROGRESS_TO_WAITING: ${{ secrets.STATUS_TRANSITION_IN_PROGRESS_TO_WAITING || 'Iprogress' }}
+          STATUS_TRANSITION_WAITING_TO_IN_PROGRESS: ${{ secrets.STATUS_TRANSITION_WAITING_TO_IN_PROGRESS || 'Wating for clinet' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4o-mini' }}
+          TIMEZONE: ${{ secrets.TIMEZONE || 'Asia/Kolkata' }}
+          WINDOW_START: ${{ secrets.WINDOW_START || '05:30' }}
+          WINDOW_END: ${{ secrets.WINDOW_END || '17:30' }}
+          LAST_RUN_PATH: ${{ secrets.LAST_RUN_PATH || 'last_run.json' }}
+          USE_CONFLUENCE_KB: ${{ secrets.USE_CONFLUENCE_KB || 'false' }}
+          CONFLUENCE_BASE_URL: ${{ secrets.CONFLUENCE_BASE_URL || 'https://certifyos.atlassian.net/wiki' }}
+          CONFLUENCE_SPACE_KEY: ${{ secrets.CONFLUENCE_SPACE_KEY || 'TS' }}
+        run: |
+          echo "Environment variables configured"
+      
+      - name: Execute Jira Auto Reply Notebook
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_ASSIGNEE_ACCOUNT_ID: ${{ secrets.JIRA_ASSIGNEE_ACCOUNT_ID }}
+          PROJECT_KEY: ${{ secrets.PROJECT_KEY }}
+          ASSIGNEE_FALLBACK: ${{ secrets.ASSIGNEE_FALLBACK || 'currentUser()' }}
+          STATUS_FIELD_ID: ${{ secrets.STATUS_FIELD_ID || 'customfield_10353' }}
+          STATUS_TRANSITION_TODO_TO_IN_PROGRESS: ${{ secrets.STATUS_TRANSITION_TODO_TO_IN_PROGRESS || 'To-Do' }}
+          STATUS_TRANSITION_IN_PROGRESS_TO_WAITING: ${{ secrets.STATUS_TRANSITION_IN_PROGRESS_TO_WAITING || 'Iprogress' }}
+          STATUS_TRANSITION_WAITING_TO_IN_PROGRESS: ${{ secrets.STATUS_TRANSITION_WAITING_TO_IN_PROGRESS || 'Wating for clinet' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4o-mini' }}
+          TIMEZONE: ${{ secrets.TIMEZONE || 'Asia/Kolkata' }}
+          WINDOW_START: ${{ secrets.WINDOW_START || '05:30' }}
+          WINDOW_END: ${{ secrets.WINDOW_END || '17:30' }}
+          LAST_RUN_PATH: ${{ secrets.LAST_RUN_PATH || 'last_run.json' }}
+          USE_CONFLUENCE_KB: ${{ secrets.USE_CONFLUENCE_KB || 'false' }}
+          CONFLUENCE_BASE_URL: ${{ secrets.CONFLUENCE_BASE_URL || 'https://certifyos.atlassian.net/wiki' }}
+          CONFLUENCE_SPACE_KEY: ${{ secrets.CONFLUENCE_SPACE_KEY || 'TS' }}
+        run: |
+          # Execute notebook using papermill
+          papermill jira_auto_reply.ipynb jira_auto_reply_output.ipynb --log-output || true
+          
+          # Alternative: Use nbconvert to execute
+          # jupyter nbconvert --to notebook --execute jira_auto_reply.ipynb --output jira_auto_reply_output.ipynb
+      
+      - name: Upload notebook output (optional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notebook-output
+          path: jira_auto_reply_output.ipynb
+          retention-days: 7
+      
+      - name: Check execution status
+        if: failure()
+        run: |
+          echo "Notebook execution failed. Check the logs above for details."
+          exit 1
