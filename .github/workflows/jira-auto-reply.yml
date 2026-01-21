@@ -34,7 +34,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install papermill jupyter  # For executing notebooks
       
       - name: Set up environment variables
         env:
@@ -60,7 +59,7 @@ jobs:
         run: |
           echo "Environment variables configured"
       
-      - name: Execute Jira Auto Reply Notebook
+      - name: Execute Jira Auto Reply Script
         env:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
@@ -82,22 +81,6 @@ jobs:
           CONFLUENCE_BASE_URL: ${{ secrets.CONFLUENCE_BASE_URL || 'https://certifyos.atlassian.net/wiki' }}
           CONFLUENCE_SPACE_KEY: ${{ secrets.CONFLUENCE_SPACE_KEY || 'TS' }}
         run: |
-          # Execute notebook using papermill
-          papermill jira_auto_reply.ipynb jira_auto_reply_output.ipynb --log-output || true
-          
-          # Alternative: Use nbconvert to execute
-          # jupyter nbconvert --to notebook --execute jira_auto_reply.ipynb --output jira_auto_reply_output.ipynb
+          # Execute Python script directly (more reliable)
+          python jira_auto_reply.py
       
-      - name: Upload notebook output (optional)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: notebook-output
-          path: jira_auto_reply_output.ipynb
-          retention-days: 7
-      
-      - name: Check execution status
-        if: failure()
-        run: |
-          echo "Notebook execution failed. Check the logs above for details."
-          exit 1
