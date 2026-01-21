@@ -233,6 +233,14 @@ If you see `ModuleNotFoundError`, ensure:
 
 This project is for internal use at CertifyOS.
 
+## GitHub Actions (Automated Execution)
+
+For automated continuous execution using GitHub Actions, see [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md). This includes:
+- Setting up GitHub Secrets
+- Configuring scheduled runs
+- Manual trigger setup
+- Monitoring and troubleshooting
+
 ## Implementation Guide
 
 For a detailed step-by-step implementation path, see [IMPLEMENTATION_PATH.md](IMPLEMENTATION_PATH.md). This document covers:
